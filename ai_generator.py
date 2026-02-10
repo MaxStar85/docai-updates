@@ -124,44 +124,114 @@ Titolo: {titolo_paziente}
     
     def _aggiungi_descrizione_denti(self, testo):
         """
-        Post-processing: aggiunge la descrizione tra parentesi alla PRIMA 
-        menzione di ogni dente, se Groq non l'ha fatto.
+        Post-processing: aggiunge o CORREGGE la descrizione tra parentesi 
+        alla PRIMA menzione di ogni dente.
+        
+        - Se manca la parentesi → la aggiunge
+        - Se c'è la parentesi ma la descrizione è sbagliata → la corregge
+        - Menzioni successive → lascia solo il numero
         """
         denti_gia_descritti = set()
         
         def _sostituisci_match(match):
-            prefisso = match.group(1)
-            numero = match.group(2)
-            dopo = match.group(3)
+            prefisso = match.group(1)        # "elemento " o "dente "
+            numero = match.group(2)           # "1.7" o "17"
+            dopo = match.group(3)             # quello che segue
             
             numero_norm = numero.replace('.', '')
             
-            if dopo and dopo.strip().startswith('('):
-                denti_gia_descritti.add(numero_norm)
+            # Cerca la descrizione corretta nella tabella
+            descrizione_corretta = None
+            if numero in self.DESCRIZIONI_DENTI:
+                descrizione_corretta = self.DESCRIZIONI_DENTI[numero]
+            elif numero_norm in self.DESCRIZIONI_DENTI_NOPUNTO:
+                descrizione_corretta = self.DESCRIZIONI_DENTI_NOPUNTO[numero_norm]
+            
+            # Se non è nella tabella, lascia com'è
+            if not descrizione_corretta:
                 return match.group(0)
             
+            # Se questo dente è già stato descritto, non fare nulla
             if numero_norm in denti_gia_descritti:
                 return match.group(0)
             
-            descrizione = None
-            if numero in self.DESCRIZIONI_DENTI:
-                descrizione = self.DESCRIZIONI_DENTI[numero]
-            elif numero_norm in self.DESCRIZIONI_DENTI_NOPUNTO:
-                descrizione = self.DESCRIZIONI_DENTI_NOPUNTO[numero_norm]
+            # Segna come descritto
+            denti_gia_descritti.add(numero_norm)
             
-            if descrizione:
-                denti_gia_descritti.add(numero_norm)
-                return f"{prefisso}{numero} ({descrizione}){dopo}"
+            # Se dopo c'è già una parentesi, controlla se la descrizione è corretta
+            if dopo and dopo.strip().startswith('('):
+                return match.group(0)  # placeholder, verrà gestito dal secondo passaggio
+            
+            # Nessuna parentesi → aggiungila
+            return f"{prefisso}{numero} ({descrizione_corretta}){dopo}"
+        
+        # PRIMO PASSAGGIO: gestisci i denti SENZA parentesi
+        pattern_senza = (
+            r"((?:dell(?:'|'))?(?:elemento|dente)\s+)"
+            r"(\d\.\d|\d{2})"
+            r"(\s*(?:[,;.\s]|$))"
+        )
+        testo = re.sub(pattern_senza, _sostituisci_match, testo, flags=re.IGNORECASE)
+        
+        # SECONDO PASSAGGIO: correggi le descrizioni SBAGLIATE nelle parentesi esistenti
+        def _correggi_descrizione(match):
+            prefisso = match.group(1)
+            numero = match.group(2)
+            descrizione_esistente = match.group(3)
+            dopo = match.group(4)
+            
+            numero_norm = numero.replace('.', '')
+            
+            # Cerca la descrizione corretta
+            descrizione_corretta = None
+            if numero in self.DESCRIZIONI_DENTI:
+                descrizione_corretta = self.DESCRIZIONI_DENTI[numero]
+            elif numero_norm in self.DESCRIZIONI_DENTI_NOPUNTO:
+                descrizione_corretta = self.DESCRIZIONI_DENTI_NOPUNTO[numero_norm]
+            
+            if not descrizione_corretta:
+                return match.group(0)
+            
+            # Controlla se la descrizione esistente è corretta
+            # Confronta in minuscolo e senza spazi extra
+            esistente_lower = descrizione_esistente.strip().lower()
+            corretta_lower = descrizione_corretta.lower()
+            
+            # Se contiene le parole chiave corrette, lascia (potrebbe avere aggiunte come "permanente")
+            # Altrimenti sostituisci
+            parole_chiave = corretta_lower.split()
+            # Controlla almeno "primo/secondo" e "molare/premolare/incisivo/canino"
+            tipo_corretto = None
+            ordine_corretto = None
+            for p in parole_chiave:
+                if p in ('primo', 'secondo', 'incisivo', 'canino'):
+                    if p in ('primo', 'secondo'):
+                        ordine_corretto = p
+                    else:
+                        tipo_corretto = p
+                if p in ('molare', 'premolare'):
+                    tipo_corretto = p
+            
+            # Se l'ordine O il tipo sono sbagliati, correggi
+            ha_errore = False
+            if ordine_corretto and ordine_corretto not in esistente_lower:
+                ha_errore = True
+            if tipo_corretto and tipo_corretto not in esistente_lower:
+                ha_errore = True
+            
+            if ha_errore:
+                return f"{prefisso}{numero} ({descrizione_corretta}){dopo}"
             else:
                 return match.group(0)
         
-        pattern = (
+        # Pattern per catturare "dente/elemento X.Y (qualsiasi descrizione)"
+        pattern_con_parentesi = (
             r"((?:dell(?:'|'))?(?:elemento|dente)\s+)"
             r"(\d\.\d|\d{2})"
-            r"(\s*(?:\(|[,;.\s]))"
+            r"\s*\(([^)]+)\)"
+            r"(\s*)"
         )
-        
-        testo = re.sub(pattern, _sostituisci_match, testo, flags=re.IGNORECASE)
+        testo = re.sub(pattern_con_parentesi, _correggi_descrizione, testo, flags=re.IGNORECASE)
         
         return testo
     
