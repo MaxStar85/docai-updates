@@ -1,4 +1,4 @@
-﻿__version__ = "1.2"
+__version__ = "1.3"
 # ai_generator.py - Generatore relazioni con Groq AI
 # CODICE PURO - Legge tutte le personalizzazioni da config.py
 
@@ -19,7 +19,6 @@ class AIGenerator:
     
     # Tabella descrizioni denti (notazione FDI)
     DESCRIZIONI_DENTI = {
-        # Superiore destro (1.x)
         '1.1': 'incisivo centrale superiore di destra',
         '1.2': 'incisivo laterale superiore di destra',
         '1.3': 'canino superiore di destra',
@@ -28,7 +27,6 @@ class AIGenerator:
         '1.6': 'primo molare superiore di destra',
         '1.7': 'secondo molare superiore di destra',
         '1.8': 'dente del giudizio superiore di destra',
-        # Superiore sinistro (2.x)
         '2.1': 'incisivo centrale superiore di sinistra',
         '2.2': 'incisivo laterale superiore di sinistra',
         '2.3': 'canino superiore di sinistra',
@@ -37,7 +35,6 @@ class AIGenerator:
         '2.6': 'primo molare superiore di sinistra',
         '2.7': 'secondo molare superiore di sinistra',
         '2.8': 'dente del giudizio superiore di sinistra',
-        # Inferiore sinistro (3.x)
         '3.1': 'incisivo centrale inferiore di sinistra',
         '3.2': 'incisivo laterale inferiore di sinistra',
         '3.3': 'canino inferiore di sinistra',
@@ -46,7 +43,6 @@ class AIGenerator:
         '3.6': 'primo molare inferiore di sinistra',
         '3.7': 'secondo molare inferiore di sinistra',
         '3.8': 'dente del giudizio inferiore di sinistra',
-        # Inferiore destro (4.x)
         '4.1': 'incisivo centrale inferiore di destra',
         '4.2': 'incisivo laterale inferiore di destra',
         '4.3': 'canino inferiore di destra',
@@ -57,7 +53,6 @@ class AIGenerator:
         '4.8': 'dente del giudizio inferiore di destra',
     }
     
-    # Stessa tabella ma senza punto (notazione alternativa: 15, 27, 36, 48...)
     DESCRIZIONI_DENTI_NOPUNTO = {}
     for k, v in DESCRIZIONI_DENTI.items():
         DESCRIZIONI_DENTI_NOPUNTO[k.replace('.', '')] = v
@@ -170,6 +165,83 @@ Titolo: {titolo_paziente}
         
         return testo
     
+    def _rimuovi_numerazione_appuntamenti(self, testo):
+        """
+        Post-processing: rimuove la numerazione degli appuntamenti 
+        e la sostituisce con nessi discorsivi.
+        """
+        # "Nel primo appuntamento" / "In un primo appuntamento"
+        testo = re.sub(
+            r'[Nn]el primo appuntamento[,.]?\s*',
+            'Si procederà con ',
+            testo, count=1
+        )
+        testo = re.sub(
+            r'[Ii]n un primo appuntamento[,.]?\s*',
+            'Si procederà con ',
+            testo, count=1
+        )
+        
+        # "Nel secondo appuntamento" / "In un secondo appuntamento"
+        testo = re.sub(
+            r'[Nn]el secondo appuntamento[,.]?\s*',
+            'Successivamente, ',
+            testo
+        )
+        testo = re.sub(
+            r'[Ii]n un secondo appuntamento[,.]?\s*',
+            'Successivamente, ',
+            testo
+        )
+        
+        # "Nel terzo appuntamento" / "In un terzo appuntamento"
+        testo = re.sub(
+            r'[Nn]el terzo appuntamento[,.]?\s*',
+            'In seguito, ',
+            testo
+        )
+        testo = re.sub(
+            r'[Ii]n un terzo appuntamento[,.]?\s*',
+            'In seguito, ',
+            testo
+        )
+        
+        # "Un terzo appuntamento sarà dedicato a/alla"
+        testo = re.sub(
+            r'[Uu]n terzo appuntamento\s+sarà\s+dedicato\s+(?:a|alla?\s+)',
+            'Si procederà poi con ',
+            testo
+        )
+        
+        # "Nei/I successivi appuntamenti saranno dedicati a/alle"
+        testo = re.sub(
+            r'[Ii] successivi appuntamenti\s+saranno\s+dedicati\s+(?:a|alle?\s+)',
+            'Si eseguiranno poi ',
+            testo
+        )
+        testo = re.sub(
+            r'[Nn]ei successivi appuntamenti[,.]?\s*',
+            'Successivamente, ',
+            testo
+        )
+        
+        # "Nel quarto appuntamento" e oltre
+        testo = re.sub(
+            r'[Nn]el (?:quarto|quinto|sesto)\s+appuntamento[,.]?\s*',
+            'Successivamente, ',
+            testo
+        )
+        
+        # Pulizia: evita doppi spazi dopo sostituzione
+        testo = re.sub(r'  +', ' ', testo)
+        
+        # Pulizia: evita maiuscola dopo virgola se la sostituzione ha creato "Successivamente, Si"
+        testo = re.sub(r'(Successivamente, |In seguito, |Si procederà con )([A-Z])', 
+                       lambda m: m.group(1) + m.group(2).lower() if m.group(2) != 'Z' and m.group(2) != 'S' else m.group(0),
+                       testo)
+        
+        return testo
+    
     def _pulisci_relazione(self, testo):
         """Correttore automatico post-generazione."""
         
@@ -183,6 +255,9 @@ Titolo: {titolo_paziente}
         # 0.5 AGGIUNGI DESCRIZIONE DENTI
         testo = self._aggiungi_descrizione_denti(testo)
         
+        # 0.6 RIMUOVI NUMERAZIONE APPUNTAMENTI
+        testo = self._rimuovi_numerazione_appuntamenti(testo)
+        
         # 1. CORREZIONI MEDICHE E ORTOGRAFICHE
         testo = re.sub(r'\bmucose(\s+\w+)?\s+rose\b', r'mucose\1 rosee', testo, flags=re.IGNORECASE)
         testo = re.sub(r'\bclori[xcs]idina\b', 'Clorexidina', testo, flags=re.IGNORECASE)
@@ -190,7 +265,6 @@ Titolo: {titolo_paziente}
         testo = re.sub(r'\blipobrufene\b', 'Ibuprofene', testo, flags=re.IGNORECASE)
         
         # 1.5 FIX GRAMMATICALI COMUNI
-        # "un'" davanti a parole maschili → "un "
         testo = re.sub(
             r"\bun'(?=intervento|appuntamento|esame|elemento|impianto|antibiotico|antidolorifico|ulteriore)",
             "un ",
@@ -207,9 +281,7 @@ Titolo: {titolo_paziente}
         testo = re.sub(r'\bsu lo\b', 'sullo', testo)
         
         # 1.6 FIX APOSTROFI USATI COME ACCENTI
-        # "E'" a inizio → "È"
         testo = re.sub(r"\bE'", "È", testo)
-        # Vocali con apostrofo → vocali accentate
         testo = re.sub(r"e'(\s|[,;.\)]|$)", r"è\1", testo)
         testo = re.sub(r"a'(\s|[,;.\)]|$)", r"à\1", testo)
         testo = re.sub(r"i'(\s|[,;.\)]|$)", r"ì\1", testo)
