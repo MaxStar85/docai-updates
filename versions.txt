@@ -1,5 +1,6 @@
 ai_module=1.0
-ai_generator=1.3
+ai_generator=2.0
 transcriber=1.1
 python=3.11.9
+
 
