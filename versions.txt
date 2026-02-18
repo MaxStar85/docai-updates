@@ -1,6 +1,7 @@
 ai_module=1.1
-ai_generator=2.2
+ai_generator=2.1
 transcriber=1.2
 update_from_github=1.2
 python=3.11.9
+
 
