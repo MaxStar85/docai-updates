@@ -1,4 +1,4 @@
-__version__ = "2.2"
+__version__ = "2.1"
 # ai_generator.py - Generatore relazioni con Groq AI
 # CODICE UNIVERSALE - Legge template dalla cartella templates/
 # NON contiene nessun riferimento a specialità mediche specifiche
