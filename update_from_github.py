@@ -1,4 +1,4 @@
-__version__ = "1.0"
+__version__ = "1.1"
 # update_from_github.py - Sistema aggiornamento file da GitHub
 # CODICE UNIVERSALE - Aggiornabile da GitHub
 # Controlla versioni remote e scarica aggiornamenti
@@ -57,7 +57,7 @@ def get_local_version(filename):
         return None
     
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, "r", encoding="utf-8-sig") as f:
             for line in f:
                 match = re.match(r'^__version__\s*=\s*["\'](.+?)["\']', line.strip())
                 if match:
