@@ -1,4 +1,4 @@
-﻿__version__ = "1.2"
+﻿__version__ = "1.3"
 # transcriber.py - DEEPGRAM REAL-TIME
 # CODICE UNIVERSALE - Parametri tecnici qui dentro (aggiornabili da GitHub)
 
@@ -156,4 +156,5 @@ class Transcriber:
                 pass
                 
     def get_full_transcription(self):
+
         return "\n".join(self.full_transcription)
