@@ -1,6 +1,4 @@
-ai_module=1.0
-ai_generator=2.0
-transcriber=1.1
+ai_module=1.1
+ai_generator=2.1
+transcriber=1.2
 python=3.11.9
-
-
