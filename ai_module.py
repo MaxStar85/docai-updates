@@ -1,4 +1,4 @@
-﻿__version__ = "1.2"
+﻿__version__ = "1.1"
 # ai_module.py - Modulo AI centralizzato
 # Check librerie disponibili + Gemini OCR
 # CODICE UNIVERSALE - Aggiornabile da GitHub
@@ -179,3 +179,4 @@ def check_all_ai_available():
     """Verifica se tutte le AI sono disponibili."""
 
     return HAS_GEMINI and HAS_GROQ and HAS_DEEPGRAM
+
