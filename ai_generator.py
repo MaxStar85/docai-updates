@@ -1,4 +1,4 @@
-﻿__version__ = "2.2"
+﻿__version__ = "2.3"
 # ai_generator.py - Generatore relazioni con Groq AI
 # CODICE UNIVERSALE - Legge template dalla cartella templates/
 # NON contiene nessun riferimento a specialità mediche specifiche
@@ -15,7 +15,7 @@ from config import NOMI_FEMMINILI
 # =============================================================================
 # MODELLI AI (aggiornabili da GitHub - MAI in config.py)
 # =============================================================================
-AI_MODEL = "llama-3.3-70b-versatile"
+AI_MODEL = "qwen/qwen3.6-27b"
 
 
 class AIGenerator:
@@ -141,7 +141,8 @@ Genere: {"Femminile" if info_paziente.get('titolo', 'Sig.') == "Sig.ra" else "Ma
                     }
                 ],
                 temperature=0.3,
-                max_tokens=4000
+                max_tokens=4000,
+                reasoning_effort="none"
             )
 
             relazione = response.choices[0].message.content
@@ -264,7 +265,8 @@ Genere: {"Femminile" if info_paziente.get('titolo', 'Sig.') == "Sig.ra" else "Ma
                 {"role": "user", "content": user_message}
             ],
             temperature=0.1,
-            max_tokens=4000
+            max_tokens=4000,
+            reasoning_effort="medium"
         )
 
         testo_pulito = response.choices[0].message.content.strip()
@@ -372,4 +374,3 @@ Scrivi gli appunti in modo chiaro, completo e strutturato."""
         for token, data_originale in mappa_date.items():
             testo = testo.replace(token, data_originale)
         return testo
-
