@@ -1,4 +1,4 @@
-﻿__version__ = "2.3"
+__version__ = "2.4"
 # ai_generator.py - Generatore relazioni con Groq AI
 # CODICE UNIVERSALE - Legge template dalla cartella templates/
 # NON contiene nessun riferimento a specialità mediche specifiche
@@ -266,7 +266,7 @@ Genere: {"Femminile" if info_paziente.get('titolo', 'Sig.') == "Sig.ra" else "Ma
             ],
             temperature=0.1,
             max_tokens=4000,
-            reasoning_effort="medium"
+            reasoning_effort="none"
         )
 
         testo_pulito = response.choices[0].message.content.strip()
